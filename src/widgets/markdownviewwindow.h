@@ -42,6 +42,12 @@ namespace vnotex
 
         void openTwice(const QSharedPointer<FileOpenParameters> &p_paras) Q_DECL_OVERRIDE;
 
+        ViewWindowSession saveSession() const Q_DECL_OVERRIDE;
+
+        void applySnippet(const QString &p_name) Q_DECL_OVERRIDE;
+
+        void applySnippet() Q_DECL_OVERRIDE;
+
     public slots:
         void handleEditorConfigChange() Q_DECL_OVERRIDE;
 
@@ -81,6 +87,8 @@ namespace vnotex
 
         void zoom(bool p_zoomIn) Q_DECL_OVERRIDE;
 
+        QPoint getFloatingWidgetPosition() Q_DECL_OVERRIDE;
+
     private:
         void setupUI();
 
@@ -94,6 +102,8 @@ namespace vnotex
         void focusEditor();
 
         void setupViewer();
+
+        void setupPreviewHelper();
 
         void syncTextEditorFromBuffer(bool p_syncPositionFromReadMode);
 
@@ -129,7 +139,7 @@ namespace vnotex
 
         void setModeInternal(ViewWindowMode p_mode, bool p_syncBuffer);
 
-        void handleFileOpenParameters(const QSharedPointer<FileOpenParameters> &p_paras);
+        void handleFileOpenParameters(const QSharedPointer<FileOpenParameters> &p_paras, bool p_twice);
 
         void scrollToLine(int p_lineNumber);
 

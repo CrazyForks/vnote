@@ -1,4 +1,32 @@
 # Changes
+## v3.4.0
+* Support Snippet
+    * `Ctrl+G S` to insert a snippet
+    * `%snippet_name%` to insert a snippet (the legacy Magic Word)
+        * Snippet is supported in some dialogs (such as creating a new note)
+* Support note template (snippet is supported)
+* Remove `'` and `"` from auot-brackets
+
+## v3.3.0
+* Editor: support auto indent, auto list
+* Support opening notes with external programs
+* Add a delay after code/math blocks update before preview
+
+## v3.2.0
+* Support local PlantUml and Graphviz rendering
+* Add shortcuts to tab navigation in ViewSplit
+* Editor: support auto bracket and overridding font family
+
+## v3.1.0
+* Support Japanese translation (Thanks @miurahr)
+* MarkdownEditor: guess image suffix when fetching to local
+* Refine read mode styles (Thanks @heartnn)
+* Support recovering edit session on start
+* Support recovering notebook explorer session on start
+* Support Flash Page
+* Support Quick Access
+* Allow to keep docks (like Outline) when expanding content area
+
 ## v3.0.1
 * Support spell check via Hunspell
 * `Ctrl+Alt+F` to trigger full-text search

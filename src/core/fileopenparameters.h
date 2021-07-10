@@ -11,6 +11,9 @@ namespace vnotex
     {
         ViewWindowMode m_mode = ViewWindowMode::Read;
 
+        // Force to enter m_mode.
+        bool m_forceMode = false;
+
         // Whether focus to the opened window.
         bool m_focus = true;
 
@@ -26,6 +29,9 @@ namespace vnotex
         // If m_lineNumber > -1, it indicates the line to scroll to after opening the file.
         // 0-based.
         int m_lineNumber = -1;
+
+        // Whether always open a new window for file.
+        bool m_alwaysNewWindow = false;
     };
 }
 

@@ -37,6 +37,24 @@ QJsonObject SessionConfig::NotebookItem::toJson() const
     return jobj;
 }
 
+void SessionConfig::ExternalProgram::fromJson(const QJsonObject &p_jobj)
+{
+    m_name = p_jobj[QStringLiteral("name")].toString();
+    m_command = p_jobj[QStringLiteral("command")].toString();
+    m_shortcut = p_jobj[QStringLiteral("shortcut")].toString();
+}
+
+QJsonObject SessionConfig::ExternalProgram::toJson() const
+{
+    QJsonObject jobj;
+
+    jobj[QStringLiteral("name")] = m_name;
+    jobj[QStringLiteral("command")] = m_command;
+    jobj[QStringLiteral("shortcut")] = m_shortcut;
+
+    return jobj;
+}
+
 SessionConfig::SessionConfig(ConfigMgr *p_mgr)
     : IConfig(p_mgr, nullptr)
 {
@@ -57,13 +75,21 @@ void SessionConfig::init()
 
     loadStateAndGeometry(sessionJobj);
 
-    if (MainConfig::isVersionChanged()) {
-        doVersionSpecificOverride();
-    }
-
     m_exportOption.fromJson(sessionJobj[QStringLiteral("export_option")].toObject());
 
     m_searchOption.fromJson(sessionJobj[QStringLiteral("search_option")].toObject());
+
+    m_viewAreaSession = readByteArray(sessionJobj, QStringLiteral("viewarea_session"));
+
+    m_notebookExplorerSession = readByteArray(sessionJobj, QStringLiteral("notebook_explorer_session"));
+
+    loadExternalPrograms(sessionJobj);
+
+    loadNotebooks(sessionJobj);
+
+    if (MainConfig::isVersionChanged()) {
+        doVersionSpecificOverride();
+    }
 }
 
 void SessionConfig::loadCore(const QJsonObject &p_session)
@@ -75,8 +101,7 @@ void SessionConfig::loadCore(const QJsonObject &p_session)
         m_newNotebookDefaultRootFolderPath = QDir::homePath();
     }
 
-    m_currentNotebookRootFolderPath = readString(coreObj,
-        QStringLiteral("current_notebook_root_folder_path"));
+    m_currentNotebookRootFolderPath = readString(coreObj, QStringLiteral("current_notebook_root_folder_path"));
 
     {
         auto option = readString(coreObj, QStringLiteral("opengl"));
@@ -92,6 +117,10 @@ void SessionConfig::loadCore(const QJsonObject &p_session)
     if (!isUndefinedKey(coreObj, QStringLiteral("minimize_to_system_tray"))) {
         m_minimizeToSystemTray = readBool(coreObj, QStringLiteral("minimize_to_system_tray")) ? 1 : 0;
     }
+
+    m_flashPage = readString(coreObj, QStringLiteral("flash_page"));
+
+    m_quickAccessFiles = readStringList(coreObj, QStringLiteral("quick_access"));
 }
 
 QJsonObject SessionConfig::saveCore() const
@@ -104,6 +133,8 @@ QJsonObject SessionConfig::saveCore() const
     if (m_minimizeToSystemTray != -1) {
         coreObj[QStringLiteral("minimize_to_system_tray")] = m_minimizeToSystemTray > 0;
     }
+    coreObj[QStringLiteral("flash_page")] = m_flashPage;
+    writeStringList(coreObj, QStringLiteral("quick_access"), m_quickAccessFiles);
     return coreObj;
 }
 
@@ -119,14 +150,8 @@ void SessionConfig::setNewNotebookDefaultRootFolderPath(const QString &p_path)
                  this);
 }
 
-const QVector<SessionConfig::NotebookItem> &SessionConfig::getNotebooks()
+const QVector<SessionConfig::NotebookItem> &SessionConfig::getNotebooks() const
 {
-    if (m_notebooks.isEmpty()) {
-        auto mgr = getMgr();
-        auto sessionSettings = mgr->getSettings(ConfigMgr::Source::Session);
-        const auto &sessionJobj = sessionSettings->getJson();
-        loadNotebooks(sessionJobj);
-    }
     return m_notebooks;
 }
 
@@ -180,6 +205,9 @@ QJsonObject SessionConfig::toJson() const
     obj[QStringLiteral("state_geometry")] = saveStateAndGeometry();
     obj[QStringLiteral("export_option")] = m_exportOption.toJson();
     obj[QStringLiteral("search_option")] = m_searchOption.toJson();
+    writeByteArray(obj, QStringLiteral("viewarea_session"), m_viewAreaSession);
+    writeByteArray(obj, QStringLiteral("notebook_explorer_session"), m_notebookExplorerSession);
+    obj[QStringLiteral("external_programs")] = saveExternalPrograms();
     return obj;
 }
 
@@ -188,6 +216,7 @@ QJsonObject SessionConfig::saveStateAndGeometry() const
     QJsonObject obj;
     writeByteArray(obj, QStringLiteral("main_window_state"), m_mainWindowStateGeometry.m_mainState);
     writeByteArray(obj, QStringLiteral("main_window_geometry"), m_mainWindowStateGeometry.m_mainGeometry);
+    writeStringList(obj, QStringLiteral("visible_docks_before_expand"), m_mainWindowStateGeometry.m_visibleDocksBeforeExpand);
     return obj;
 }
 
@@ -307,4 +336,72 @@ void SessionConfig::loadStateAndGeometry(const QJsonObject &p_session)
     const auto obj = p_session.value(QStringLiteral("state_geometry")).toObject();
     m_mainWindowStateGeometry.m_mainState = readByteArray(obj, QStringLiteral("main_window_state"));
     m_mainWindowStateGeometry.m_mainGeometry = readByteArray(obj, QStringLiteral("main_window_geometry"));
+    m_mainWindowStateGeometry.m_visibleDocksBeforeExpand = readStringList(obj, QStringLiteral("visible_docks_before_expand"));
+}
+
+QByteArray SessionConfig::getViewAreaSessionAndClear()
+{
+    QByteArray bytes;
+    m_viewAreaSession.swap(bytes);
+    return bytes;
+}
+
+void SessionConfig::setViewAreaSession(const QByteArray &p_bytes)
+{
+    updateConfigWithoutCheck(m_viewAreaSession, p_bytes, this);
+}
+
+QByteArray SessionConfig::getNotebookExplorerSessionAndClear()
+{
+    QByteArray bytes;
+    m_notebookExplorerSession.swap(bytes);
+    return bytes;
+}
+
+void SessionConfig::setNotebookExplorerSession(const QByteArray &p_bytes)
+{
+    updateConfigWithoutCheck(m_notebookExplorerSession, p_bytes, this);
+}
+
+const QString &SessionConfig::getFlashPage() const
+{
+    return m_flashPage;
+}
+
+void SessionConfig::setFlashPage(const QString &p_file)
+{
+    updateConfig(m_flashPage, p_file, this);
+}
+
+const QStringList &SessionConfig::getQuickAccessFiles() const
+{
+    return m_quickAccessFiles;
+}
+
+void SessionConfig::setQuickAccessFiles(const QStringList &p_files)
+{
+    updateConfig(m_quickAccessFiles, p_files, this);
+}
+
+void SessionConfig::loadExternalPrograms(const QJsonObject &p_session)
+{
+    const auto arr = p_session.value(QStringLiteral("external_programs")).toArray();
+    m_externalPrograms.resize(arr.size());
+    for (int i = 0; i < arr.size(); ++i) {
+        m_externalPrograms[i].fromJson(arr[i].toObject());
+    }
+}
+
+QJsonArray SessionConfig::saveExternalPrograms() const
+{
+    QJsonArray arr;
+    for (const auto &pro : m_externalPrograms) {
+        arr.append(pro.toJson());
+    }
+    return arr;
+}
+
+const QVector<SessionConfig::ExternalProgram> &SessionConfig::getExternalPrograms() const
+{
+    return m_externalPrograms;
 }

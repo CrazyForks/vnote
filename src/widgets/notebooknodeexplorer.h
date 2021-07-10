@@ -149,10 +149,13 @@ namespace vnotex
             ReloadIndex,
             ImportToConfig,
             Open,
-            ExpandAll
+            ExpandAll,
+            PinToQuickAccess
         };
 
         void setupUI();
+
+        void setupShortcuts();
 
         void setupMasterExplorer(QWidget *p_parent = nullptr);
 
@@ -165,6 +168,8 @@ namespace vnotex
         void loadNode(QTreeWidgetItem *p_item, Node *p_node, int p_level) const;
 
         void loadChildren(QTreeWidgetItem *p_item, Node *p_node, int p_level) const;
+
+        void loadItemChildren(QTreeWidgetItem *p_item) const;
 
         void loadNode(QTreeWidgetItem *p_item, const QSharedPointer<ExternalNode> &p_node) const;
 
@@ -256,11 +261,19 @@ namespace vnotex
 
         // Check whether @p_node is a valid node. Will notify user.
         // Return true if it is invalid.
-        bool checkInvalidNode(const Node *p_node) const;
+        bool checkInvalidNode(Node *p_node) const;
 
         void expandCurrentNodeAll();
 
         void expandItemRecursively(QTreeWidgetItem *p_item);
+
+        void addOpenWithMenu(QMenu *p_menu);
+
+        QStringList getSelectedNodesPath() const;
+
+        void openSelectedNodesWithDefaultProgram();
+
+        void openSelectedNodesWithExternalProgram(const QString &p_command);
 
         static NotebookNodeExplorer::NodeData getItemNodeData(const QTreeWidgetItem *p_item);
 

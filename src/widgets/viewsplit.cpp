@@ -42,8 +42,10 @@ const QString ViewSplit::c_actionButtonForegroundName = "widgets#viewsplit#actio
 
 ViewSplit::ViewSplit(const QVector<QSharedPointer<ViewWorkspace>> &p_allWorkspaces,
                      const QSharedPointer<ViewWorkspace> &p_workspace,
+                     ID p_id,
                      QWidget *p_parent)
     : QTabWidget(p_parent),
+      m_id(p_id),
       m_allWorkspaces(p_allWorkspaces)
 {
     setAcceptDrops(true);
@@ -101,6 +103,9 @@ void ViewSplit::focusCurrentViewWindow()
     } else {
         setFocus();
     }
+
+    m_lastViewWindow = m_currentViewWindow;
+    m_currentViewWindow = win;
 }
 
 void ViewSplit::setupCornerWidget()
@@ -258,17 +263,12 @@ void ViewSplit::setWorkspace(const QSharedPointer<ViewWorkspace> &p_workspace)
 void ViewSplit::updateAndTakeCurrentWorkspace()
 {
     if (m_workspace) {
-        // Store current workspace.
-        m_workspace->m_currentViewWindowIndex = currentIndex();
+        updateStateToWorkspace();
 
         // Take all the view windows out.
         int cnt = getViewWindowCount();
-        m_workspace->m_viewWindows.resize(cnt);
         for (int i = cnt - 1; i >= 0; --i) {
-            auto window = getViewWindow(i);
-            takeViewWindow(window);
-
-            m_workspace->m_viewWindows[i] = window;
+            takeViewWindow(getViewWindow(i));
         }
 
         m_workspace->m_visible = false;
@@ -276,6 +276,23 @@ void ViewSplit::updateAndTakeCurrentWorkspace()
         m_workspace = nullptr;
     } else {
         Q_ASSERT(getViewWindowCount() == 0);
+    }
+}
+
+void ViewSplit::updateStateToWorkspace() const
+{
+    if (!m_workspace) {
+        return;
+    }
+
+    Q_ASSERT(m_workspace->m_visible);
+
+    m_workspace->m_currentViewWindowIndex = currentIndex();
+
+    int cnt = getViewWindowCount();
+    m_workspace->m_viewWindows.resize(cnt);
+    for (int i = cnt - 1; i >= 0; --i) {
+        m_workspace->m_viewWindows[i] = getViewWindow(i);
     }
 }
 
@@ -393,7 +410,7 @@ void ViewSplit::updateWindowList(QMenu *p_menu)
     int cnt = getViewWindowCount();
     if (cnt == 0) {
         // Add a dummy entry.
-        auto act = p_menu->addAction(tr("No window to show here"));
+        auto act = p_menu->addAction(tr("No Window To Show"));
         act->setEnabled(false);
         return;
     }
@@ -401,8 +418,7 @@ void ViewSplit::updateWindowList(QMenu *p_menu)
     for (int i = 0; i < cnt; ++i) {
         auto window = getViewWindow(i);
 
-        auto act = new QAction(window->getIcon(),
-                               window->getName(),
+        auto act = new QAction(window->getName(),
                                m_windowListActionGroup);
         act->setToolTip(window->getTitle());
         act->setData(i);
@@ -441,7 +457,7 @@ void ViewSplit::updateMenu(QMenu *p_menu)
         }
 
         for (int i = 0; i < m_allWorkspaces.size(); ++i) {
-            auto act = new QAction(tr("Workspace %1").arg(m_allWorkspaces[i]->c_id),
+            auto act = new QAction(tr("Workspace %1").arg(m_allWorkspaces[i]->m_id),
                                    m_workspaceActionGroup);
             act->setData(i);
             act->setCheckable(true);
@@ -553,6 +569,25 @@ void ViewSplit::createContextMenuOnTabBar(QMenu *p_menu, int p_tabIdx) const
 
     p_menu->addSeparator();
 
+    {
+        auto act = p_menu->addAction(tr("Auto Reload"));
+        act->setToolTip(tr("Reload file from disk automatically if it is changed outside"));
+        act->setCheckable(true);
+        auto win = getViewWindow(p_tabIdx);
+        Q_ASSERT(win);
+        act->setChecked(win->getWindowFlags() & ViewWindow::AutoReload);
+        connect(act, &QAction::triggered,
+                this, [win](bool p_checked) {
+                    if (p_checked) {
+                        win->setWindowFlags(win->getWindowFlags() | ViewWindow::AutoReload);
+                    } else {
+                        win->setWindowFlags(win->getWindowFlags() & ~ViewWindow::AutoReload);
+                    }
+                });
+    }
+
+    p_menu->addSeparator();
+
     // Copy Path.
     p_menu->addAction(tr("Copy Path"),
                       [this, p_tabIdx]() {
@@ -588,6 +623,16 @@ void ViewSplit::createContextMenuOnTabBar(QMenu *p_menu, int p_tabIdx) const
         WidgetUtils::addActionShortcutText(locateNodeAct,
                                            ConfigMgr::getInst().getCoreConfig().getShortcut(CoreConfig::Shortcut::LocateNode));
     }
+
+    // Pin To Quick Access.
+    p_menu->addAction(tr("Pin To Quick Access"),
+                      [this, p_tabIdx]() {
+                          auto win = getViewWindow(p_tabIdx);
+                          if (win) {
+                              const QStringList files(win->getBuffer()->getPath());
+                              emit VNoteX::getInst().pinToQuickAccessRequested(files);
+                          }
+                      });
 }
 
 void ViewSplit::closeTab(int p_idx)
@@ -729,9 +774,187 @@ void ViewSplit::setupShortcuts()
                     });
         }
     }
+
+    // ActivateTab1.
+    {
+        auto shortcut = WidgetUtils::createShortcut(coreConfig.getShortcut(CoreConfig::ActivateTab1), this, Qt::WidgetWithChildrenShortcut);
+        if (shortcut) {
+            connect(shortcut, &QShortcut::activated,
+                    this, [this]() {
+                        setCurrentViewWindow(0);
+                    });
+        }
+    }
+
+    // ActivateTab2.
+    {
+        auto shortcut = WidgetUtils::createShortcut(coreConfig.getShortcut(CoreConfig::ActivateTab2), this, Qt::WidgetWithChildrenShortcut);
+        if (shortcut) {
+            connect(shortcut, &QShortcut::activated,
+                    this, [this]() {
+                        setCurrentViewWindow(1);
+                    });
+        }
+    }
+
+    // ActivateTab3.
+    {
+        auto shortcut = WidgetUtils::createShortcut(coreConfig.getShortcut(CoreConfig::ActivateTab3), this, Qt::WidgetWithChildrenShortcut);
+        if (shortcut) {
+            connect(shortcut, &QShortcut::activated,
+                    this, [this]() {
+                        setCurrentViewWindow(2);
+                    });
+        }
+    }
+
+    // ActivateTab4.
+    {
+        auto shortcut = WidgetUtils::createShortcut(coreConfig.getShortcut(CoreConfig::ActivateTab4), this, Qt::WidgetWithChildrenShortcut);
+        if (shortcut) {
+            connect(shortcut, &QShortcut::activated,
+                    this, [this]() {
+                        setCurrentViewWindow(3);
+                    });
+        }
+    }
+
+    // ActivateTab5.
+    {
+        auto shortcut = WidgetUtils::createShortcut(coreConfig.getShortcut(CoreConfig::ActivateTab5), this, Qt::WidgetWithChildrenShortcut);
+        if (shortcut) {
+            connect(shortcut, &QShortcut::activated,
+                    this, [this]() {
+                        setCurrentViewWindow(4);
+                    });
+        }
+    }
+
+    // ActivateTab6.
+    {
+        auto shortcut = WidgetUtils::createShortcut(coreConfig.getShortcut(CoreConfig::ActivateTab6), this, Qt::WidgetWithChildrenShortcut);
+        if (shortcut) {
+            connect(shortcut, &QShortcut::activated,
+                    this, [this]() {
+                        setCurrentViewWindow(5);
+                    });
+        }
+    }
+
+    // ActivateTab7.
+    {
+        auto shortcut = WidgetUtils::createShortcut(coreConfig.getShortcut(CoreConfig::ActivateTab7), this, Qt::WidgetWithChildrenShortcut);
+        if (shortcut) {
+            connect(shortcut, &QShortcut::activated,
+                    this, [this]() {
+                        setCurrentViewWindow(6);
+                    });
+        }
+    }
+
+    // ActivateTab8.
+    {
+        auto shortcut = WidgetUtils::createShortcut(coreConfig.getShortcut(CoreConfig::ActivateTab8), this, Qt::WidgetWithChildrenShortcut);
+        if (shortcut) {
+            connect(shortcut, &QShortcut::activated,
+                    this, [this]() {
+                        setCurrentViewWindow(7);
+                    });
+        }
+    }
+
+    // ActivateTab9.
+    {
+        auto shortcut = WidgetUtils::createShortcut(coreConfig.getShortcut(CoreConfig::ActivateTab9), this, Qt::WidgetWithChildrenShortcut);
+        if (shortcut) {
+            connect(shortcut, &QShortcut::activated,
+                    this, [this]() {
+                        setCurrentViewWindow(8);
+                    });
+        }
+    }
+
+    // AlternateTab.
+    {
+        auto shortcut = WidgetUtils::createShortcut(coreConfig.getShortcut(CoreConfig::AlternateTab), this, Qt::WidgetWithChildrenShortcut);
+        if (shortcut) {
+            connect(shortcut, &QShortcut::activated,
+                    this, &ViewSplit::alternateTab);
+        }
+    }
+
+    // ActivateNextTab.
+    {
+        auto shortcut = WidgetUtils::createShortcut(coreConfig.getShortcut(CoreConfig::ActivateNextTab), this, Qt::WidgetWithChildrenShortcut);
+        if (shortcut) {
+            connect(shortcut, &QShortcut::activated,
+                    this, [this]() {
+                        activateNextTab(false);
+                    });
+        }
+    }
+
+    // ActivatePreviousTab.
+    {
+        auto shortcut = WidgetUtils::createShortcut(coreConfig.getShortcut(CoreConfig::ActivatePreviousTab), this, Qt::WidgetWithChildrenShortcut);
+        if (shortcut) {
+            connect(shortcut, &QShortcut::activated,
+                    this, [this]() {
+                        activateNextTab(true);
+                    });
+        }
+    }
 }
 
 void ViewSplit::focus()
 {
     focusCurrentViewWindow();
+}
+
+ID ViewSplit::getId() const
+{
+    return m_id;
+}
+
+void ViewSplit::setCurrentViewWindow(int p_idx)
+{
+    auto win = getViewWindow(p_idx);
+    setCurrentViewWindow(win);
+}
+
+void ViewSplit::alternateTab()
+{
+    if (!m_lastViewWindow) {
+        return;
+    }
+
+    // It is fine even when m_lastViewWindow is a wild pointer. The implementation will just
+    // compare its value without dereferencing it.
+    if (-1 != indexOf(m_lastViewWindow)) {
+        setCurrentViewWindow(m_lastViewWindow);
+    } else {
+        m_lastViewWindow = nullptr;
+    }
+}
+
+void ViewSplit::activateNextTab(bool p_backward)
+{
+    int idx = currentIndex();
+    if (idx == -1 || count() == 1) {
+        return;
+    }
+
+    if (p_backward) {
+        --idx;
+        if (idx < 0) {
+            idx = count() - 1;
+        }
+    } else {
+        ++idx;
+        if (idx >= count()) {
+            idx = 0;
+        }
+    }
+
+    setCurrentViewWindow(idx);
 }

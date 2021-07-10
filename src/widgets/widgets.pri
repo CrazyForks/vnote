@@ -13,25 +13,33 @@ SOURCES += \
     $$PWD/dialogs/legacynotebookutils.cpp \
     $$PWD/dialogs/linkinsertdialog.cpp \
     $$PWD/dialogs/newnotebookfromfolderdialog.cpp \
+    $$PWD/dialogs/newsnippetdialog.cpp \
     $$PWD/dialogs/selectdialog.cpp \
     $$PWD/dialogs/selectionitemwidget.cpp \
     $$PWD/dialogs/settings/appearancepage.cpp \
     $$PWD/dialogs/settings/editorpage.cpp \
     $$PWD/dialogs/settings/generalpage.cpp \
     $$PWD/dialogs/settings/markdowneditorpage.cpp \
+    $$PWD/dialogs/settings/miscpage.cpp \
+    $$PWD/dialogs/settings/quickaccesspage.cpp \
     $$PWD/dialogs/settings/settingspage.cpp \
     $$PWD/dialogs/settings/settingsdialog.cpp \
     $$PWD/dialogs/settings/texteditorpage.cpp \
     $$PWD/dialogs/settings/themepage.cpp \
+    $$PWD/dialogs/snippetinfowidget.cpp \
+    $$PWD/dialogs/snippetpropertiesdialog.cpp \
     $$PWD/dialogs/sortdialog.cpp \
     $$PWD/dialogs/tableinsertdialog.cpp \
     $$PWD/dragdropareaindicator.cpp \
     $$PWD/editors/editormarkdownvieweradapter.cpp \
+    $$PWD/editors/graphhelper.cpp \
+    $$PWD/editors/graphvizhelper.cpp \
     $$PWD/editors/markdowneditor.cpp \
     $$PWD/editors/markdowntable.cpp \
     $$PWD/editors/markdowntablehelper.cpp \
     $$PWD/editors/markdownviewer.cpp \
     $$PWD/editors/markdownvieweradapter.cpp \
+    $$PWD/editors/plantumlhelper.cpp \
     $$PWD/editors/previewhelper.cpp \
     $$PWD/editors/statuswidget.cpp \
     $$PWD/editors/texteditor.cpp \
@@ -39,26 +47,34 @@ SOURCES += \
     $$PWD/filesystemviewer.cpp \
     $$PWD/dialogs/folderfilesfilterwidget.cpp \
     $$PWD/findandreplacewidget.cpp \
+    $$PWD/floatingwidget.cpp \
     $$PWD/fullscreentoggleaction.cpp \
     $$PWD/lineedit.cpp \
     $$PWD/lineeditdelegate.cpp \
+    $$PWD/lineeditwithsnippet.cpp \
     $$PWD/listwidget.cpp \
+    $$PWD/locationinputwithbrowsebutton.cpp \
     $$PWD/locationlist.cpp \
     $$PWD/mainwindow.cpp \
     $$PWD/markdownviewwindow.cpp \
     $$PWD/navigationmodemgr.cpp \
+    $$PWD/notebookexplorersession.cpp \
     $$PWD/outlinepopup.cpp \
     $$PWD/outlineprovider.cpp \
     $$PWD/outlineviewer.cpp \
     $$PWD/propertydefs.cpp \
+    $$PWD/quickselector.cpp \
     $$PWD/searchinfoprovider.cpp \
     $$PWD/searchpanel.cpp \
+    $$PWD/snippetpanel.cpp \
     $$PWD/systemtrayhelper.cpp \
     $$PWD/textviewwindow.cpp \
     $$PWD/toolbarhelper.cpp \
     $$PWD/treeview.cpp \
+    $$PWD/viewareasession.cpp \
     $$PWD/viewsplit.cpp \
     $$PWD/viewwindow.cpp \
+    $$PWD/viewwindowsession.cpp \
     $$PWD/viewwindowtoolbarhelper.cpp \
     $$PWD/webpage.cpp \
     $$PWD/webviewer.cpp \
@@ -103,25 +119,33 @@ HEADERS += \
     $$PWD/dialogs/legacynotebookutils.h \
     $$PWD/dialogs/linkinsertdialog.h \
     $$PWD/dialogs/newnotebookfromfolderdialog.h \
+    $$PWD/dialogs/newsnippetdialog.h \
     $$PWD/dialogs/selectdialog.h \
     $$PWD/dialogs/selectionitemwidget.h \
     $$PWD/dialogs/settings/appearancepage.h \
     $$PWD/dialogs/settings/editorpage.h \
     $$PWD/dialogs/settings/generalpage.h \
     $$PWD/dialogs/settings/markdowneditorpage.h \
+    $$PWD/dialogs/settings/miscpage.h \
+    $$PWD/dialogs/settings/quickaccesspage.h \
     $$PWD/dialogs/settings/settingspage.h \
     $$PWD/dialogs/settings/settingsdialog.h \
     $$PWD/dialogs/settings/texteditorpage.h \
     $$PWD/dialogs/settings/themepage.h \
+    $$PWD/dialogs/snippetinfowidget.h \
+    $$PWD/dialogs/snippetpropertiesdialog.h \
     $$PWD/dialogs/sortdialog.h \
     $$PWD/dialogs/tableinsertdialog.h \
     $$PWD/dragdropareaindicator.h \
     $$PWD/editors/editormarkdownvieweradapter.h \
+    $$PWD/editors/graphhelper.h \
+    $$PWD/editors/graphvizhelper.h \
     $$PWD/editors/markdowneditor.h \
     $$PWD/editors/markdowntable.h \
     $$PWD/editors/markdowntablehelper.h \
     $$PWD/editors/markdownviewer.h \
     $$PWD/editors/markdownvieweradapter.h \
+    $$PWD/editors/plantumlhelper.h \
     $$PWD/editors/previewhelper.h \
     $$PWD/editors/statuswidget.h \
     $$PWD/editors/texteditor.h \
@@ -129,28 +153,36 @@ HEADERS += \
     $$PWD/filesystemviewer.h \
     $$PWD/dialogs/folderfilesfilterwidget.h \
     $$PWD/findandreplacewidget.h \
+    $$PWD/floatingwidget.h \
     $$PWD/fullscreentoggleaction.h \
     $$PWD/lineedit.h \
     $$PWD/lineeditdelegate.h \
+    $$PWD/lineeditwithsnippet.h \
     $$PWD/listwidget.h \
+    $$PWD/locationinputwithbrowsebutton.h \
     $$PWD/locationlist.h \
     $$PWD/mainwindow.h \
     $$PWD/markdownviewwindow.h \
     $$PWD/navigationmodemgr.h \
     $$PWD/navigationmodewrapper.h \
+    $$PWD/notebookexplorersession.h \
     $$PWD/outlinepopup.h \
     $$PWD/outlineprovider.h \
     $$PWD/outlineviewer.h \
     $$PWD/propertydefs.h \
+    $$PWD/quickselector.h \
     $$PWD/searchinfoprovider.h \
     $$PWD/searchpanel.h \
+    $$PWD/snippetpanel.h \
     $$PWD/systemtrayhelper.h \
     $$PWD/textviewwindow.h \
     $$PWD/textviewwindowhelper.h \
     $$PWD/toolbarhelper.h \
     $$PWD/treeview.h \
+    $$PWD/viewareasession.h \
     $$PWD/viewsplit.h \
     $$PWD/viewwindow.h \
+    $$PWD/viewwindowsession.h \
     $$PWD/viewwindowtoolbarhelper.h \
     $$PWD/webpage.h \
     $$PWD/webviewer.h \

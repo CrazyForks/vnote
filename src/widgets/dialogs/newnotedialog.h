@@ -3,6 +3,9 @@
 
 #include "scrolldialog.h"
 
+class QComboBox;
+class QPlainTextEdit;
+
 namespace vnotex
 {
     class Notebook;
@@ -21,13 +24,14 @@ namespace vnotex
     protected:
         void acceptedButtonClicked() Q_DECL_OVERRIDE;
 
-    private slots:
-        void validateInputs();
-
     private:
         void setupUI(const Node *p_node);
 
         void setupNodeInfoWidget(const Node *p_node, QWidget *p_parent);
+
+        void setupTemplateComboBox(QWidget *p_parent);
+
+        bool validateInputs();
 
         bool validateNameInput(QString &p_msg);
 
@@ -35,9 +39,19 @@ namespace vnotex
 
         void initDefaultValues(const Node *p_node);
 
+        QString getTemplateContent() const;
+
         NodeInfoWidget *m_infoWidget = nullptr;
 
+        QComboBox *m_templateComboBox = nullptr;
+
+        QPlainTextEdit *m_templateTextEdit = nullptr;
+
+        QString m_templateContent;
+
         QSharedPointer<Node> m_newNode;
+
+        static QString s_lastTemplate;
     };
 } // ns vnotex
 

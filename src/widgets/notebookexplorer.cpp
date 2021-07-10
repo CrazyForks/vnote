@@ -40,6 +40,19 @@ NotebookExplorer::NotebookExplorer(QWidget *p_parent)
     : QFrame(p_parent)
 {
     setupUI();
+
+    auto mainWindow = VNoteX::getInst().getMainWindow();
+    connect(mainWindow, &MainWindow::mainWindowClosed,
+            this, [this](const QSharedPointer<Event> &p_event) {
+                if (p_event->m_handled) {
+                    return;
+                }
+
+                saveSession();
+            });
+
+    connect(mainWindow, &MainWindow::mainWindowStarted,
+            this, &NotebookExplorer::loadSession);
 }
 
 void NotebookExplorer::setupUI()
@@ -92,6 +105,7 @@ TitleBar *NotebookExplorer::setupTitleBar(QWidget *p_parent)
                                  TitleBar::Action::Menu,
                                  p_parent);
     titleBar->setWhatsThis(tr("This title bar contains buttons and menu to manage notebooks and notes."));
+    titleBar->setActionButtonsAlwaysShown(true);
 
     {
         auto viewMenu = WidgetsFactory::createMenu(titleBar);
@@ -169,12 +183,16 @@ void NotebookExplorer::reloadNotebook(const Notebook *p_notebook)
 
 void NotebookExplorer::setCurrentNotebook(const QSharedPointer<Notebook> &p_notebook)
 {
+    updateSession();
+
     m_currentNotebook = p_notebook;
 
     ID id = p_notebook ? p_notebook->getId() : static_cast<ID>(Notebook::InvalidId);
     m_selector->setCurrentNotebook(id);
 
     m_nodeExplorer->setNotebook(p_notebook);
+
+    recoverSession();
 
     emit updateTitleBarMenuActions();
 }
@@ -413,4 +431,60 @@ void NotebookExplorer::setupViewMenu(QMenu *p_menu)
                 ConfigMgr::getInst().getWidgetConfig().setNodeExplorerViewOrder(order);
                 m_nodeExplorer->setViewOrder(order);
             });
+}
+
+void NotebookExplorer::saveSession()
+{
+    updateSession();
+
+    auto &sessionConfig = ConfigMgr::getInst().getSessionConfig();
+    sessionConfig.setNotebookExplorerSession(m_session.serialize());
+}
+
+void NotebookExplorer::loadSession()
+{
+    auto &sessionConfig = ConfigMgr::getInst().getSessionConfig();
+    m_session = NotebookExplorerSession::deserialize(sessionConfig.getNotebookExplorerSessionAndClear());
+
+    m_sessionLoaded = true;
+
+    recoverSession();
+}
+
+void NotebookExplorer::updateSession()
+{
+    if (!m_sessionLoaded || !m_currentNotebook) {
+        return;
+    }
+
+    auto& nbSession = m_session.m_notebooks[m_currentNotebook->getRootFolderPath()];
+    nbSession.m_recovered = true;
+
+    auto node = currentExploredNode();
+    if (node) {
+        nbSession.m_currentNodePath = node->fetchPath();
+    } else {
+        nbSession.m_currentNodePath.clear();
+    }
+}
+
+void NotebookExplorer::recoverSession()
+{
+    if (!m_sessionLoaded || !m_currentNotebook) {
+        return;
+    }
+
+    auto it = m_session.m_notebooks.find(m_currentNotebook->getRootFolderPath());
+    if (it != m_session.m_notebooks.end()) {
+        if (it.value().m_recovered || it.value().m_currentNodePath.isEmpty()) {
+            return;
+        }
+
+        it.value().m_recovered = true;
+
+        auto node = m_currentNotebook->loadNodeByPath(it.value().m_currentNodePath);
+        if (node) {
+            m_nodeExplorer->setCurrentNode(node.data());
+        }
+    }
 }

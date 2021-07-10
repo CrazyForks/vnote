@@ -30,9 +30,10 @@ namespace vnotex
             ViewWindow *m_viewWindow = nullptr;
         };
 
-        explicit ViewSplit(const QVector<QSharedPointer<ViewWorkspace>> &p_allWorkspaces,
-                           const QSharedPointer<ViewWorkspace> &p_workspace,
-                           QWidget *p_parent = nullptr);
+        ViewSplit(const QVector<QSharedPointer<ViewWorkspace>> &p_allWorkspaces,
+                  const QSharedPointer<ViewWorkspace> &p_workspace,
+                  ID p_id,
+                  QWidget *p_parent = nullptr);
 
         ~ViewSplit();
 
@@ -44,6 +45,8 @@ namespace vnotex
 
         ViewWindow *getCurrentViewWindow() const;
         void setCurrentViewWindow(ViewWindow *p_win);
+
+        void setCurrentViewWindow(int p_idx);
 
         // @p_win is not deleted.
         void takeViewWindow(ViewWindow *p_win);
@@ -61,6 +64,10 @@ namespace vnotex
         QVector<ViewWindowNavigationModeInfo> getNavigationModeInfo() const;
 
         void focus();
+
+        ID getId() const;
+
+        void updateStateToWorkspace() const;
 
     signals:
         void viewWindowCloseRequested(ViewWindow *p_win);
@@ -122,6 +129,12 @@ namespace vnotex
 
         void focusCurrentViewWindow();
 
+        void alternateTab();
+
+        void activateNextTab(bool p_backward);
+
+        ID m_id = 0;
+
         const QVector<QSharedPointer<ViewWorkspace>> &m_allWorkspaces;
 
         QSharedPointer<ViewWorkspace> m_workspace;
@@ -133,6 +146,10 @@ namespace vnotex
         QActionGroup *m_windowListActionGroup = nullptr;
 
         QActionGroup *m_workspaceActionGroup = nullptr;
+
+        // Used for AlternateTab.
+        ViewWindow *m_currentViewWindow = nullptr;
+        ViewWindow *m_lastViewWindow = nullptr;
 
         static QIcon s_windowListIcon;
 

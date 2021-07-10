@@ -3,7 +3,7 @@
     "metadata" : {
         "//comment": "When releasing new version, please go through the following configs to check if override is needed.",
         "//Comment": "markdown_editor#override_viewer_resource",
-        "version" : "3.0.1"
+        "version" : "3.4.0"
     },
     "core" : {
         "theme" : "pure",
@@ -15,10 +15,11 @@
             "Settings" : "Ctrl+Alt+P",
             "NewNote" : "Ctrl+Alt+N",
             "CloseTab" : "Ctrl+G, X",
-            "NavigationDock" : "Ctrl+G, 1",
-            "OutlineDock" : "Ctrl+G, 2",
-            "SearchDock" : "Ctrl+G, 3",
-            "LocationListDock" : "Ctrl+G, 4",
+            "NavigationDock" : "Ctrl+G, A",
+            "OutlineDock" : "Ctrl+G, U",
+            "SearchDock" : "",
+            "SnippetDock" : "Ctrl+G, S",
+            "LocationListDock" : "Ctrl+G, L",
             "Search" : "Ctrl+Alt+F",
             "NavigationMode" : "Ctrl+G, W",
             "LocateNode" : "Ctrl+G, D",
@@ -27,8 +28,25 @@
             "MaximizeSplit" : "Ctrl+G, Shift+\\",
             "DistributeSplits" : "Ctrl+G, =",
             "RemoveSplitAndWorkspace" : "Ctrl+G, R",
-            "NewWorkspace" : "Ctrl+G, N",
-            "Export" : "Ctrl+G, T"
+            "NewWorkspace" : "Ctrl+G, M",
+            "Export" : "Ctrl+G, T",
+            "Quit" : "Ctrl+Q",
+            "FlashPage" : "Ctrl+Alt+L",
+            "QuickAccess" : "Ctrl+Alt+I",
+            "ActivateTab1" : "Ctrl+G, 1",
+            "ActivateTab2" : "Ctrl+G, 2",
+            "ActivateTab3" : "Ctrl+G, 3",
+            "ActivateTab4" : "Ctrl+G, 4",
+            "ActivateTab5" : "Ctrl+G, 5",
+            "ActivateTab6" : "Ctrl+G, 6",
+            "ActivateTab7" : "Ctrl+G, 7",
+            "ActivateTab8" : "Ctrl+G, 8",
+            "ActivateTab9" : "Ctrl+G, 9",
+            "AlternateTab" : "Ctrl+G, 0",
+            "ActivateNextTab" : "Ctrl+G, N",
+            "ActivatePreviousTab" : "Ctrl+G, P",
+            "FocusContentArea" : "Ctrl+G, Y",
+            "OpenWithDefaultProgram" : "F9"
         },
         "toolbar_icon_size" : 16,
         "note_management" : {
@@ -39,11 +57,12 @@
                     ".git"
                 ]
             }
-        }
+        },
+        "recover_last_session_on_start" : true
     },
     "editor" : {
         "core": {
-            "toolbar_icon_size" : 14,
+            "toolbar_icon_size" : 16,
             "//comment" : "none/autosave/backupfile",
             "auto_save_policy" : "autosave",
             "backup_file_extension" : "vswp",
@@ -66,15 +85,16 @@
                 "TypeOrderedList" : "Ctrl+9",
                 "TypeCode" : "Ctrl+;",
                 "TypeCodeBlock" : "Ctrl+'",
-                "TypeMath" : "Ctrl+,",
-                "TypeMathBlock" : "Ctrl+.",
+                "TypeMath" : "Ctrl+.",
+                "TypeMathBlock" : "Ctrl+G, .",
                 "TypeTable" : "Ctrl+/",
                 "TypeMark" : "Ctrl+G, M",
                 "Outline" : "Ctrl+G, O",
                 "RichPaste" : "Ctrl+Shift+V",
                 "FindAndReplace" : "Ctrl+F",
                 "FindNext" : "F3",
-                "FindPrevious" : "Shift+F3"
+                "FindPrevious" : "Shift+F3",
+                "ApplySnippet" : "Ctrl+G, I"
             },
             "spell_check_auto_detect_language" : false,
             "spell_check_default_dictionary" : "en_US"
@@ -97,7 +117,7 @@
             "spell_check": false
         },
         "markdown_editor" : {
-            "override_viewer_resource" : true,
+            "override_viewer_resource" : false,
             "viewer_resource" : {
                 "template" : "web/markdown-viewer-template.html",
                 "resources" : [
@@ -257,8 +277,15 @@
             },
             "//comment" : "Whether use javascript or external program to render PlantUML",
             "web_plantuml" : true,
+            "//commnet" : "Local PlantUML JAR file to render PlantUML",
+            "plantuml_jar" : "",
+            "//commnet" : "Command to render PlantUML via stdin and stdout (overrides plantuml_jar)",
+            "//commnet" : "- %1: the format to render in",
+            "plantuml_command" : "",
             "//comment" : "Whether use javascript or external program to render Graphviz",
             "web_graphviz" : true,
+            "//commnet" : "Local Graphviz executable file to render Graphviz",
+            "graphviz_exe" : "",
             "//comment" : "Whether prepend a dot at front in relative link like images",
             "prepend_dot_in_relative_link" : false,
             "//comment" : "Whether ask for user confirmation before clearing obsolete images",
@@ -294,7 +321,8 @@
             "smart_table" : true,
             "//comment" : "Time interval (milliseconds) to do smart table formatting",
             "smart_table_interval" : 1000,
-            "spell_check" : true
+            "spell_check" : true,
+            "editor_overridden_font_family" : ""
         }
     },
     "widget" : {
@@ -307,6 +335,8 @@
         "node_explorer_recycle_bin_node_visible" : false,
         "node_explorer_external_files_visible" : true,
         "node_explorer_auto_import_external_files_enabled" : true,
-        "search_panel_advanced_settings_visible" : true
+        "search_panel_advanced_settings_visible" : true,
+        "//comment" : "Docks to ignore when expanding content area of main window",
+        "main_window_keep_docks_expanding_content_area": []
     }
 }

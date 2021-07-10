@@ -3,7 +3,7 @@
 
 #include <QWidget>
 
-#include "notebook/node.h"
+#include <notebook/node.h>
 
 class QLineEdit;
 class QLabel;
@@ -14,6 +14,7 @@ namespace vnotex
 {
     class Notebook;
     class NodeLabelWithUpButton;
+    class LineEditWithSnippet;
 
     class NodeInfoWidget : public QWidget
     {
@@ -35,6 +36,9 @@ namespace vnotex
 
         const Node *getParentNode() const;
 
+        // Allow upper level to add more widgets to the layout.
+        QFormLayout *getMainLayout() const;
+
     signals:
         void inputEdited();
 
@@ -47,13 +51,13 @@ namespace vnotex
 
         void setNode(const Node *p_node);
 
-        Mode m_mode;
+        Mode m_mode = Mode::Create;
 
         QFormLayout *m_mainLayout = nullptr;
 
         QComboBox *m_fileTypeComboBox = nullptr;
 
-        QLineEdit *m_nameLineEdit = nullptr;
+        LineEditWithSnippet *m_nameLineEdit = nullptr;
 
         NodeLabelWithUpButton *m_parentNodeLabel = nullptr;
 

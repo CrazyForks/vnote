@@ -29,6 +29,8 @@
 #include "toolbarhelper.h"
 #include "findandreplacewidget.h"
 #include "editors/statuswidget.h"
+#include "editors/plantumlhelper.h"
+#include "editors/graphvizhelper.h"
 
 using namespace vnotex;
 
@@ -40,7 +42,7 @@ MarkdownViewWindow::MarkdownViewWindow(QWidget *p_parent)
 
     setupUI();
 
-    m_previewHelper = new PreviewHelper(nullptr, this);
+    setupPreviewHelper();
 }
 
 MarkdownViewWindow::~MarkdownViewWindow()
@@ -176,7 +178,12 @@ void MarkdownViewWindow::handleEditorConfigChange()
 
     if (markdownEditorConfig.revision() != m_markdownEditorConfigRevision) {
         m_markdownEditorConfigRevision = markdownEditorConfig.revision();
+
+        m_previewHelper->setWebPlantUmlEnabled(markdownEditorConfig.getWebPlantUml());
+        m_previewHelper->setWebGraphvizEnabled(markdownEditorConfig.getWebGraphviz());
+
         HtmlTemplateHelper::updateMarkdownViewerTemplate(markdownEditorConfig);
+
         if (m_editor) {
             auto config = createMarkdownEditorConfig(markdownEditorConfig);
             m_editor->setConfig(config);
@@ -236,7 +243,7 @@ void MarkdownViewWindow::handleBufferChangedInternal(const QSharedPointer<FileOp
 
     TextViewWindowHelper::handleBufferChanged(this);
 
-    handleFileOpenParameters(p_paras);
+    handleFileOpenParameters(p_paras, false);
 }
 
 void MarkdownViewWindow::setupToolBar()
@@ -777,10 +784,14 @@ void MarkdownViewWindow::setupOutlineProvider()
 QSharedPointer<vte::MarkdownEditorConfig> MarkdownViewWindow::createMarkdownEditorConfig(const MarkdownEditorConfig &p_config)
 {
     const auto &themeMgr = VNoteX::getInst().getThemeMgr();
+
     auto textEditorConfig = TextViewWindowHelper::createTextEditorConfig(p_config.getTextEditorConfig(),
                                                                          themeMgr.getFile(Theme::File::MarkdownEditorStyle),
                                                                          themeMgr.getMarkdownEditorHighlightTheme());
+
     auto editorConfig = QSharedPointer<vte::MarkdownEditorConfig>::create(textEditorConfig);
+    editorConfig->overrideTextFontFamily(p_config.getEditorOverriddenFontFamily());
+
     editorConfig->m_constrainInPlacePreviewWidthEnabled = p_config.getConstrainInPlacePreviewWidthEnabled();
     return editorConfig;
 }
@@ -890,7 +901,7 @@ void MarkdownViewWindow::handleFindAndReplaceWidgetOpened()
     m_findAndReplace->setReplaceEnabled(!isReadMode());
 }
 
-void MarkdownViewWindow::handleFileOpenParameters(const QSharedPointer<FileOpenParameters> &p_paras)
+void MarkdownViewWindow::handleFileOpenParameters(const QSharedPointer<FileOpenParameters> &p_paras, bool p_twice)
 {
     if (!p_paras) {
         return;
@@ -904,9 +915,13 @@ void MarkdownViewWindow::handleFileOpenParameters(const QSharedPointer<FileOpenP
             const auto title = QString("# %1\n").arg(QFileInfo(buffer->getName()).completeBaseName());
             m_editor->insertText(title);
         }
-    }
+    } else {
+        if (!p_twice || p_paras->m_forceMode) {
+            setMode(p_paras->m_mode);
+        }
 
-    scrollToLine(p_paras->m_lineNumber);
+        scrollToLine(p_paras->m_lineNumber);
+    }
 }
 
 void MarkdownViewWindow::scrollToLine(int p_lineNumber)
@@ -931,7 +946,57 @@ bool MarkdownViewWindow::isReadMode() const
 
 void MarkdownViewWindow::openTwice(const QSharedPointer<FileOpenParameters> &p_paras)
 {
-    qDebug() << p_paras->m_lineNumber;
     Q_ASSERT(!p_paras || !p_paras->m_newFile);
-    handleFileOpenParameters(p_paras);
+    handleFileOpenParameters(p_paras, true);
+}
+
+ViewWindowSession MarkdownViewWindow::saveSession() const
+{
+    auto session = ViewWindow::saveSession();
+    if (getBuffer()) {
+        session.m_lineNumber = isReadMode() ? adapter()->getTopLineNumber()
+                                            : m_editor->getCursorPosition().first;
+    }
+    return session;
+}
+
+void MarkdownViewWindow::setupPreviewHelper()
+{
+    Q_ASSERT(!m_previewHelper);
+
+    m_previewHelper = new PreviewHelper(nullptr, this);
+
+    const auto &markdownEditorConfig = ConfigMgr::getInst().getEditorConfig().getMarkdownEditorConfig();
+    m_previewHelper->setWebPlantUmlEnabled(markdownEditorConfig.getWebPlantUml());
+    m_previewHelper->setWebGraphvizEnabled(markdownEditorConfig.getWebGraphviz());
+
+    PlantUmlHelper::getInst().init(markdownEditorConfig.getPlantUmlJar(),
+                                   markdownEditorConfig.getGraphvizExe(),
+                                   markdownEditorConfig.getPlantUmlCommand());
+    GraphvizHelper::getInst().init(markdownEditorConfig.getGraphvizExe());
+}
+
+void MarkdownViewWindow::applySnippet(const QString &p_name)
+{
+    if (isReadMode()) {
+        qWarning() << "failed to apply snippet in read mode" << p_name;
+        return;
+    }
+
+    TextViewWindowHelper::applySnippet(this, p_name);
+}
+
+void MarkdownViewWindow::applySnippet()
+{
+    if (isReadMode()) {
+        qWarning() << "failed to apply snippet in read mode";
+        return;
+    }
+
+    TextViewWindowHelper::applySnippet(this);
+}
+
+QPoint MarkdownViewWindow::getFloatingWidgetPosition()
+{
+    return TextViewWindowHelper::getFloatingWidgetPosition(this);
 }

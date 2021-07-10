@@ -34,11 +34,15 @@ namespace vnotex
             bool operator==(const MainWindowStateGeometry &p_other) const
             {
                 return m_mainState == p_other.m_mainState
-                       && m_mainGeometry == p_other.m_mainGeometry;
+                       && m_mainGeometry == p_other.m_mainGeometry
+                       && m_visibleDocksBeforeExpand == p_other.m_visibleDocksBeforeExpand;
             }
 
             QByteArray m_mainState;
+
             QByteArray m_mainGeometry;
+
+            QStringList m_visibleDocksBeforeExpand;
         };
 
         enum OpenGL
@@ -47,6 +51,20 @@ namespace vnotex
             Desktop,
             Angle,
             Software
+        };
+
+        struct ExternalProgram
+        {
+            void fromJson(const QJsonObject &p_jobj);
+
+            QJsonObject toJson() const;
+
+            QString m_name;
+
+            // %1: the file paths to open.
+            QString m_command;
+
+            QString m_shortcut;
         };
 
         explicit SessionConfig(ConfigMgr *p_mgr);
@@ -61,7 +79,7 @@ namespace vnotex
         const QString &getCurrentNotebookRootFolderPath() const;
         void setCurrentNotebookRootFolderPath(const QString &p_path);
 
-        const QVector<SessionConfig::NotebookItem> &getNotebooks();
+        const QVector<SessionConfig::NotebookItem> &getNotebooks() const;
         void setNotebooks(const QVector<SessionConfig::NotebookItem> &p_notebooks);
 
         void writeToSettings() const Q_DECL_OVERRIDE;
@@ -91,6 +109,20 @@ namespace vnotex
         const SearchOption &getSearchOption() const;
         void setSearchOption(const SearchOption &p_option);
 
+        QByteArray getViewAreaSessionAndClear();
+        void setViewAreaSession(const QByteArray &p_bytes);
+
+        QByteArray getNotebookExplorerSessionAndClear();
+        void setNotebookExplorerSession(const QByteArray &p_bytes);
+
+        const QString &getFlashPage() const;
+        void setFlashPage(const QString &p_file);
+
+        const QStringList &getQuickAccessFiles() const;
+        void setQuickAccessFiles(const QStringList &p_files);
+
+        const QVector<ExternalProgram> &getExternalPrograms() const;
+
     private:
         void loadCore(const QJsonObject &p_session);
 
@@ -103,6 +135,10 @@ namespace vnotex
         void loadStateAndGeometry(const QJsonObject &p_session);
 
         QJsonObject saveStateAndGeometry() const;
+
+        void loadExternalPrograms(const QJsonObject &p_session);
+
+        QJsonArray saveExternalPrograms() const;
 
         void doVersionSpecificOverride();
 
@@ -129,6 +165,16 @@ namespace vnotex
         ExportOption m_exportOption;
 
         SearchOption m_searchOption;
+
+        QByteArray m_viewAreaSession;
+
+        QByteArray m_notebookExplorerSession;
+
+        QString m_flashPage;
+
+        QStringList m_quickAccessFiles;
+
+        QVector<ExternalProgram> m_externalPrograms;
     };
 } // ns vnotex
 

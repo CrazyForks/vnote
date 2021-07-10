@@ -13,6 +13,7 @@
 #include <QFocusEvent>
 #include <QShortcut>
 #include <QWheelEvent>
+#include <QWidgetAction>
 
 #include <core/fileopenparameters.h>
 #include "toolbarhelper.h"
@@ -33,6 +34,7 @@
 #include "findandreplacewidget.h"
 #include "editors/statuswidget.h"
 #include "propertydefs.h"
+#include "floatingwidget.h"
 
 using namespace vnotex;
 
@@ -178,7 +180,7 @@ void ViewWindow::detachFromBuffer(bool p_quiet)
     }
 }
 
-const QIcon &ViewWindow::getIcon() const
+QIcon ViewWindow::getIcon() const
 {
     if (m_buffer) {
         return m_buffer->isModified() ? s_modifiedIcon : s_savedIcon;
@@ -409,7 +411,12 @@ QAction *ViewWindow::addAction(QToolBar *p_toolBar, ViewWindowToolBarHelper::Act
         connect(act, &QAction::triggered,
                 this, [this]() {
                     if (findAndReplaceWidgetVisible()) {
-                        hideFindAndReplaceWidget();
+                        const auto focusWidget = QApplication::focusWidget();
+                        if (m_findAndReplace == focusWidget || m_findAndReplace->isAncestorOf(focusWidget)) {
+                            hideFindAndReplaceWidget();
+                        } else {
+                            showFindAndReplaceWidget();
+                        }
                     } else {
                         showFindAndReplaceWidget();
                     }
@@ -750,12 +757,15 @@ int ViewWindow::checkFileMissingOrChangedOutside()
             return Failed;
         }
     } else if (m_buffer->checkFileChangedOutside()) {
-        int ret = MessageBoxHelper::questionSaveDiscardCancel(MessageBoxHelper::Warning,
-            tr("File is changed from outside (%1).").arg(m_buffer->getPath()),
-            tr("Do you want to save the buffer to the file to override, or discard the buffer?"),
-            tr("The file is changed from outside. Please choose to save the buffer to the file or "
-               "just discard the buffer and reload the file."),
-            this);
+        int ret = QMessageBox::Discard;
+        if (!(getWindowFlags() & WindowFlag::AutoReload)) {
+            ret = MessageBoxHelper::questionSaveDiscardCancel(MessageBoxHelper::Warning,
+                tr("File is changed from outside (%1).").arg(m_buffer->getPath()),
+                tr("Do you want to save the buffer to the file to override, or discard the buffer?"),
+                tr("The file is changed from outside. Please choose to save the buffer to the file or "
+                   "just discard the buffer and reload the file."),
+                this);
+        }
         switch (ret) {
         case QMessageBox::Save:
             if (!save(true)) {
@@ -854,6 +864,17 @@ void ViewWindow::setupShortcuts()
             connect(shortcut, &QShortcut::activated,
                     this, [this]() {
                         findNextOnLastFind(false);
+                    });
+        }
+    }
+
+    // ApplySnippet.
+    {
+        auto shortcut = WidgetUtils::createShortcut(editorConfig.getShortcut(EditorConfig::ApplySnippet), this, Qt::WidgetWithChildrenShortcut);
+        if (shortcut) {
+            connect(shortcut, &QShortcut::activated,
+                    this, [this]() {
+                        applySnippet();
                     });
         }
     }
@@ -1078,4 +1099,46 @@ QToolBar *ViewWindow::createToolBar(QWidget *p_parent)
     auto toolBar = new QToolBar(p_parent);
     toolBar->setProperty(PropertyDefs::c_viewWindowToolBar, true);
     return toolBar;
+}
+
+ViewWindowSession ViewWindow::saveSession() const
+{
+    ViewWindowSession session;
+    if (m_buffer) {
+        session.m_bufferPath = m_buffer->getPath();
+        session.m_readOnly = m_buffer->isReadOnly();
+    }
+    session.m_viewWindowMode = getMode();
+    return session;
+}
+
+ViewWindow::WindowFlags ViewWindow::getWindowFlags() const
+{
+    return m_flags;
+}
+
+void ViewWindow::setWindowFlags(WindowFlags p_flags)
+{
+    m_flags = p_flags;
+}
+
+QVariant ViewWindow::showFloatingWidget(FloatingWidget *p_widget)
+{
+    // Show the widget through a QWidgetAction in menu.
+    QMenu menu;
+
+    auto act = new QWidgetAction(&menu);
+    // @act will own @p_widget.
+    act->setDefaultWidget(p_widget);
+    menu.addAction(act);
+
+    p_widget->setMenu(&menu);
+
+    menu.exec(getFloatingWidgetPosition());
+    return p_widget->result();
+}
+
+QPoint ViewWindow::getFloatingWidgetPosition()
+{
+    return mapToGlobal(QPoint(5, 5));
 }

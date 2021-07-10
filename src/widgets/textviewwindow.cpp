@@ -244,3 +244,27 @@ void TextViewWindow::handleFileOpenParameters(const QSharedPointer<FileOpenParam
         m_editor->scrollToLine(p_paras->m_lineNumber, true);
     }
 }
+
+ViewWindowSession TextViewWindow::saveSession() const
+{
+    auto session = ViewWindow::saveSession();
+    if (getBuffer()) {
+        session.m_lineNumber = m_editor->getCursorPosition().first;
+    }
+    return session;
+}
+
+void TextViewWindow::applySnippet(const QString &p_name)
+{
+    TextViewWindowHelper::applySnippet(this, p_name);
+}
+
+void TextViewWindow::applySnippet()
+{
+    TextViewWindowHelper::applySnippet(this);
+}
+
+QPoint TextViewWindow::getFloatingWidgetPosition()
+{
+    return TextViewWindowHelper::getFloatingWidgetPosition(this);
+}

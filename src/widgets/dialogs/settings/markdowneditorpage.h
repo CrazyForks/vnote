@@ -8,9 +8,12 @@ class QGroupBox;
 class QDoubleSpinBox;
 class QSpinBox;
 class QComboBox;
+class QFontComboBox;
 
 namespace vnotex
 {
+    class LocationInputWithBrowseButton;
+
     class MarkdownEditorPage : public SettingsPage
     {
         Q_OBJECT
@@ -60,6 +63,18 @@ namespace vnotex
         QCheckBox *m_smartTableCheckBox = nullptr;
 
         QCheckBox *m_spellCheckCheckBox = nullptr;
+
+        QComboBox *m_plantUmlModeComboBox = nullptr;
+
+        LocationInputWithBrowseButton *m_plantUmlJarFileInput = nullptr;
+
+        QComboBox *m_graphvizModeComboBox = nullptr;
+
+        LocationInputWithBrowseButton *m_graphvizFileInput = nullptr;
+
+        QCheckBox *m_editorOverriddenFontFamilyCheckBox = nullptr;
+
+        QFontComboBox *m_editorOverriddenFontFamilyComboBox = nullptr;
     };
 }
 

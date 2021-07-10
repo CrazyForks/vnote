@@ -9,6 +9,7 @@
 #include <core/global.h>
 
 #include "viewwindowtoolbarhelper.h"
+#include "viewwindowsession.h"
 
 class QVBoxLayout;
 class QTimer;
@@ -24,11 +25,19 @@ namespace vnotex
     class EditReadDiscardAction;
     class FindAndReplaceWidget;
     class StatusWidget;
+    class FloatingWidget;
 
     class ViewWindow : public QFrame
     {
         Q_OBJECT
     public:
+        enum WindowFlag
+        {
+            None = 0,
+            AutoReload = 0x1
+        };
+        Q_DECLARE_FLAGS(WindowFlags, WindowFlag);
+
         explicit ViewWindow(QWidget *p_parent = nullptr);
 
         virtual ~ViewWindow();
@@ -42,7 +51,7 @@ namespace vnotex
         // User request to open the buffer attached to this ViewWindow again.
         virtual void openTwice(const QSharedPointer<FileOpenParameters> &p_paras) = 0;
 
-        virtual const QIcon &getIcon() const;
+        virtual QIcon getIcon() const;
 
         virtual QString getName() const;
 
@@ -70,6 +79,19 @@ namespace vnotex
 
         // Called by upside.
         void checkFileMissingOrChangedOutsidePeriodically();
+
+        virtual ViewWindowSession saveSession() const;
+
+        WindowFlags getWindowFlags() const;
+        void setWindowFlags(WindowFlags p_flags);
+
+        virtual void applySnippet(const QString &p_name) = 0;
+
+        virtual void applySnippet() = 0;
+
+        // Take ownership of @p_widget.
+        // Return the result from the FloatingWidget.
+        QVariant showFloatingWidget(FloatingWidget *p_widget);
 
     public slots:
         virtual void handleEditorConfigChange() = 0;
@@ -148,9 +170,6 @@ namespace vnotex
 
         virtual void handleFindAndReplaceWidgetOpened();
 
-        // Show message in status widget if exists. Otherwise, show it in the mainwindow's status widget.
-        void showMessage(const QString p_msg);
-
     protected:
         void setCentralWidget(QWidget *p_widget);
 
@@ -212,6 +231,11 @@ namespace vnotex
         void edit();
 
         void read(bool p_save);
+
+        // Show message in status widget if exists. Otherwise, show it in the mainwindow's status widget.
+        void showMessage(const QString p_msg);
+
+        virtual QPoint getFloatingWidgetPosition();
 
         static QToolBar *createToolBar(QWidget *p_parent = nullptr);
 
@@ -317,9 +341,13 @@ namespace vnotex
 
         EditReadDiscardAction *m_editReadDiscardAct = nullptr;
 
+        WindowFlags m_flags = WindowFlag::None;
+
         static QIcon s_savedIcon;
         static QIcon s_modifiedIcon;
     };
 } // ns vnotex
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(vnotex::ViewWindow::WindowFlags)
 
 #endif // VIEWWINDOW_H

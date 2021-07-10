@@ -18,7 +18,6 @@
 #include <QSystemTrayIcon>
 #include <QWindowStateChangeEvent>
 #include <QTimer>
-#include <QBitArray>
 
 #include "toolbox.h"
 #include "notebookexplorer.h"
@@ -29,6 +28,7 @@
 #include <core/configmgr.h>
 #include <core/sessionconfig.h>
 #include <core/coreconfig.h>
+#include <core/widgetconfig.h>
 #include <core/events.h>
 #include <core/fileopenparameters.h>
 #include <widgets/dialogs/exportdialog.h>
@@ -41,6 +41,7 @@
 #include "titletoolbar.h"
 #include "locationlist.h"
 #include "searchpanel.h"
+#include "snippetpanel.h"
 #include <notebook/notebook.h>
 #include "searchinfoprovider.h"
 #include <vtextedit/spellchecker.h>
@@ -79,15 +80,19 @@ MainWindow::~MainWindow()
 void MainWindow::kickOffOnStart(const QStringList &p_paths)
 {
     QTimer::singleShot(300, [this, p_paths]() {
+        // Need to load the state of dock widgets again after the main window is shown.
+        loadStateAndGeometry(true);
+
         VNoteX::getInst().initLoad();
 
+        setupSpellCheck();
+
+        // Do necessary stuffs before emitting this signal.
         emit mainWindowStarted();
 
         emit layoutChanged();
 
         demoWidget();
-
-        setupSpellCheck();
 
         openFiles(p_paths);
     });
@@ -203,6 +208,8 @@ void MainWindow::setupDocks()
 
     setupSearchDock();
 
+    setupSnippetDock();
+
     for (int i = 1; i < m_docks.size(); ++i) {
         tabifyDockWidget(m_docks[i - 1], m_docks[i]);
     }
@@ -248,9 +255,9 @@ void MainWindow::setupNavigationDock()
     dock->setObjectName(QStringLiteral("NavigationDock.vnotex"));
     dock->setAllowedAreas(Qt::AllDockWidgetAreas);
 
-    setupNavigationToolBox();
-    dock->setWidget(m_navigationToolBox);
-    dock->setFocusProxy(m_navigationToolBox);
+    setupNotebookExplorer(this);
+    dock->setWidget(m_notebookExplorer);
+    dock->setFocusProxy(m_notebookExplorer);
     addDockWidget(Qt::LeftDockWidgetArea, dock);
 }
 
@@ -292,6 +299,34 @@ void MainWindow::setupSearchPanel()
     m_searchPanel->setObjectName("SearchPanel.vnotex");
 }
 
+void MainWindow::setupSnippetDock()
+{
+    auto dock = new QDockWidget(tr("Snippets"), this);
+    m_docks.push_back(dock);
+
+    dock->setObjectName(QStringLiteral("SnippetDock.vnotex"));
+    dock->setAllowedAreas(Qt::AllDockWidgetAreas);
+
+    setupSnippetPanel();
+    dock->setWidget(m_snippetPanel);
+    dock->setFocusProxy(m_snippetPanel);
+    addDockWidget(Qt::LeftDockWidgetArea, dock);
+}
+
+void MainWindow::setupSnippetPanel()
+{
+    m_snippetPanel = new SnippetPanel(this);
+    m_snippetPanel->setObjectName("SnippetPanel.vnotex");
+    connect(m_snippetPanel, &SnippetPanel::applySnippetRequested,
+            this, [this](const QString &p_name) {
+                auto viewWindow = m_viewArea->getCurrentViewWindow();
+                if (viewWindow) {
+                    viewWindow->applySnippet(p_name);
+                    viewWindow->setFocus();
+                }
+            });
+}
+
 void MainWindow::setupLocationListDock()
 {
     auto dock = new QDockWidget(tr("Location List"), this);
@@ -313,39 +348,6 @@ void MainWindow::setupLocationList()
     m_locationList->setObjectName("LocationList.vnotex");
 
     NavigationModeMgr::getInst().registerNavigationTarget(m_locationList->getNavigationModeWrapper());
-}
-
-void MainWindow::setupNavigationToolBox()
-{
-    m_navigationToolBox = new ToolBox(this);
-    m_navigationToolBox->setObjectName("NavigationToolBox.vnotex");
-
-    NavigationModeMgr::getInst().registerNavigationTarget(m_navigationToolBox);
-
-    const auto &themeMgr = VNoteX::getInst().getThemeMgr();
-
-    // Notebook explorer.
-    setupNotebookExplorer(m_navigationToolBox);
-    m_navigationToolBox->addItem(m_notebookExplorer,
-                                 themeMgr.getIconFile("notebook_explorer.svg"),
-                                 tr("Notebooks"),
-                                 nullptr);
-
-    /*
-    // History explorer.
-    auto historyExplorer = new QWidget(this);
-    m_navigationToolBox->addItem(historyExplorer,
-                                 themeMgr.getIconFile("history_explorer.svg"),
-                                 tr("History"),
-                                 nullptr);
-
-    // Tag explorer.
-    auto tagExplorer = new QWidget(this);
-    m_navigationToolBox->addItem(tagExplorer,
-                                 themeMgr.getIconFile("tag_explorer.svg"),
-                                 tr("Tags"),
-                                 nullptr);
-     */
 }
 
 void MainWindow::setupNotebookExplorer(QWidget *p_parent)
@@ -448,23 +450,36 @@ void MainWindow::saveStateAndGeometry()
     SessionConfig::MainWindowStateGeometry sg;
     sg.m_mainState = saveState();
     sg.m_mainGeometry = saveGeometry();
+    sg.m_visibleDocksBeforeExpand = m_visibleDocksBeforeExpand;
 
     auto& sessionConfig = ConfigMgr::getInst().getSessionConfig();
     sessionConfig.setMainWindowStateGeometry(sg);
 }
 
-void MainWindow::loadStateAndGeometry()
+void MainWindow::loadStateAndGeometry(bool p_stateOnly)
 {
     const auto& sessionConfig = ConfigMgr::getInst().getSessionConfig();
     const auto sg = sessionConfig.getMainWindowStateGeometry();
 
-    if (!sg.m_mainGeometry.isEmpty()) {
+    if (!p_stateOnly && !sg.m_mainGeometry.isEmpty()) {
         restoreGeometry(sg.m_mainGeometry);
     }
 
     if (!sg.m_mainState.isEmpty()) {
         // Will also restore the state of dock widgets.
         restoreState(sg.m_mainState);
+    }
+
+    if (!p_stateOnly) {
+        m_visibleDocksBeforeExpand = sg.m_visibleDocksBeforeExpand;
+        if (m_visibleDocksBeforeExpand.isEmpty()) {
+            // Init (or init again if there is no visible dock).
+            for (int i = 0; i < m_docks.size(); ++i) {
+                if (m_docks[i]->isVisible()) {
+                    m_visibleDocksBeforeExpand.push_back(m_docks[i]->objectName());
+                }
+            }
+        }
     }
 }
 
@@ -482,35 +497,50 @@ void MainWindow::resetStateAndGeometry()
 
 void MainWindow::setContentAreaExpanded(bool p_expanded)
 {
-    static QBitArray dockStateCache(m_docks.size(), false);
+    const auto &keepDocks = ConfigMgr::getInst().getWidgetConfig().getMainWindowKeepDocksExpandingContentArea();
 
     if (p_expanded) {
         // Store the state and hide.
+        m_visibleDocksBeforeExpand.clear();
         for (int i = 0; i < m_docks.size(); ++i) {
-            if (m_docks[i]->isFloating()) {
-                dockStateCache[i] = true;
+            const auto objName = m_docks[i]->objectName();
+            if (m_docks[i]->isVisible()) {
+                m_visibleDocksBeforeExpand.push_back(objName);
+            }
+
+            if (m_docks[i]->isFloating() || keepDocks.contains(objName)) {
                 continue;
             }
 
-            dockStateCache[i] = m_docks[i]->isVisible();
             m_docks[i]->setVisible(false);
         }
     } else {
         // Restore the state.
+        bool hasVisible = false;
         for (int i = 0; i < m_docks.size(); ++i) {
-            if (m_docks[i]->isFloating()) {
+            const auto objName = m_docks[i]->objectName();
+            if (m_docks[i]->isFloating() || keepDocks.contains(objName)) {
                 continue;
             }
 
-            m_docks[i]->setVisible(dockStateCache[i]);
+            const bool visible = m_visibleDocksBeforeExpand.contains(objName);
+            hasVisible = hasVisible || visible;
+
+            m_docks[i]->setVisible(visible);
+        }
+
+        if (!hasVisible) {
+            // At least make one visible.
+            m_docks[DockIndex::NavigationDock]->setVisible(true);
         }
     }
 }
 
 bool MainWindow::isContentAreaExpanded() const
 {
+    const auto &keepDocks = ConfigMgr::getInst().getWidgetConfig().getMainWindowKeepDocksExpandingContentArea();
     for (auto dock : m_docks) {
-        if (!dock->isFloating() && dock->isVisible()) {
+        if (!dock->isFloating() && dock->isVisible() && !keepDocks.contains(dock->objectName())) {
             return false;
         }
     }
@@ -613,6 +643,9 @@ void MainWindow::setupShortcuts()
 
     setupDockActivateShortcut(m_docks[DockIndex::LocationListDock],
                               coreConfig.getShortcut(CoreConfig::Shortcut::LocationListDock));
+
+    setupDockActivateShortcut(m_docks[DockIndex::SnippetDock],
+                              coreConfig.getShortcut(CoreConfig::Shortcut::SnippetDock));
 }
 
 void MainWindow::setupDockActivateShortcut(QDockWidget *p_dock, const QString &p_keys)

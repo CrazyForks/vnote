@@ -6,6 +6,8 @@
 
 #include <vtextedit/global.h>
 #include <vtextedit/lrucache.h>
+#include <vtextedit/pegmarkdownhighlighterdata.h>
+
 #include <core/global.h>
 #include "markdownvieweradapter.h"
 
@@ -14,12 +16,6 @@ class QTextDocument;
 
 namespace vte
 {
-    namespace peg
-    {
-        struct FencedCodeBlock;
-        struct MathBlock;
-    }
-
     struct PreviewItem;
 }
 
@@ -46,6 +42,10 @@ namespace vnotex
         PreviewHelper(MarkdownEditor *p_editor, QObject *p_parent = nullptr);
 
         void setMarkdownEditor(MarkdownEditor *p_editor);
+
+        void setWebPlantUmlEnabled(bool p_enabled);
+
+        void setWebGraphvizEnabled(bool p_enabled);
 
     public slots:
         void codeBlocksUpdated(vte::TimeStamp p_timeStamp,
@@ -180,7 +180,19 @@ namespace vnotex
 
         void updateEditorInplacePreviewMathBlock();
 
+        void handleLocalData(quint64 p_id,
+                             TimeStamp p_timeStamp,
+                             const QString &p_format,
+                             const QString &p_data,
+                             bool p_forcedBackground);
+
         qreal getEditorScaleFactor() const;
+
+        bool needForcedBackground(const QString &p_lang) const;
+
+        void handleCodeBlocksUpdate();
+
+        void handleMathBlocksUpdate();
 
         MarkdownEditor *m_editor = nullptr;
 
@@ -213,6 +225,18 @@ namespace vnotex
         vte::LruCache<QString, QSharedPointer<GraphPreviewData>> m_codeBlockCache;
 
         vte::LruCache<QString, QSharedPointer<GraphPreviewData>> m_mathBlockCache;
+
+        bool m_webPlantUmlEnabled = true;
+
+        bool m_webGraphvizEnabled = true;
+
+        QVector<vte::peg::FencedCodeBlock> m_pendingCodeBlocks;
+
+        QTimer *m_codeBlockTimer = nullptr;
+
+        QVector<vte::peg::MathBlock> m_pendingMathBlocks;
+
+        QTimer *m_mathBlockTimer = nullptr;
     };
 }
 

@@ -21,7 +21,9 @@ SOURCES += \
     $$PWD/logger.cpp \
     $$PWD/mainconfig.cpp \
     $$PWD/markdowneditorconfig.cpp \
+    $$PWD/quickaccesshelper.cpp \
     $$PWD/singleinstanceguard.cpp \
+    $$PWD/templatemgr.cpp \
     $$PWD/texteditorconfig.cpp \
     $$PWD/vnotex.cpp \
     $$PWD/thememgr.cpp \
@@ -46,8 +48,11 @@ HEADERS += \
     $$PWD/logger.h \
     $$PWD/mainconfig.h \
     $$PWD/markdowneditorconfig.h \
+    $$PWD/noncopyable.h \
+    $$PWD/quickaccesshelper.h \
     $$PWD/singleinstanceguard.h \
     $$PWD/iconfig.h \
+    $$PWD/templatemgr.h \
     $$PWD/texteditorconfig.h \
     $$PWD/vnotex.h \
     $$PWD/thememgr.h \

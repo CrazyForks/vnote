@@ -21,6 +21,7 @@
 #include <vtextedit/vtextedit.h>
 #include <vtextedit/texteditutils.h>
 #include <vtextedit/networkutils.h>
+#include <vtextedit/theme.h>
 
 #include <widgets/dialogs/linkinsertdialog.h>
 #include <widgets/dialogs/imageinsertdialog.h>
@@ -35,8 +36,8 @@
 #include <utils/pathutils.h>
 #include <utils/htmlutils.h>
 #include <utils/widgetutils.h>
-#include <utils/textutils.h>
 #include <utils/webutils.h>
+#include <utils/imageutils.h>
 #include <core/exception.h>
 #include <core/markdowneditorconfig.h>
 #include <core/texteditorconfig.h>
@@ -996,6 +997,7 @@ void MarkdownEditor::parseToMarkdownAndPaste()
 void MarkdownEditor::handleHtmlToMarkdownData(quint64 p_id, TimeStamp p_timeStamp, const QString &p_text)
 {
     Q_UNUSED(p_id);
+    qDebug() << "htmlToMarkdownData" << p_timeStamp;
     if (m_timeStamp == p_timeStamp && !p_text.isEmpty()) {
         QString text(p_text);
 
@@ -1047,8 +1049,10 @@ void MarkdownEditor::fetchImagesToLocalAndReplace(QString &p_text)
             continue;
         }
 
+        qDebug() << "fetching image link" << linkText;
+
         const QString imageTitle = purifyImageTitle(regExp.cap(1).trimmed());
-        const QString imageUrl = regExp.cap(2).trimmed();
+        QString imageUrl = regExp.cap(2).trimmed();
 
         const int maxUrlLength = 100;
         QString urlToDisplay(imageUrl);
@@ -1090,9 +1094,20 @@ void MarkdownEditor::fetchImagesToLocalAndReplace(QString &p_text)
             }
         } else {
             // Network path.
+            // Prepend the protocol if missing.
+            if (imageUrl.startsWith(QStringLiteral("//"))) {
+                imageUrl.prepend(QStringLiteral("https:"));
+            }
             QByteArray data = vte::Downloader::download(QUrl(imageUrl));
             if (!data.isEmpty()) {
-                tmpFile.reset(FileUtils::createTemporaryFile(info.suffix()));
+                // Prefer the suffix from the real data.
+                auto suffix = ImageUtils::guessImageSuffix(data);
+                if (suffix.isEmpty()) {
+                    suffix = info.suffix();
+                } else if (info.suffix() != suffix) {
+                    qWarning() << "guess a different suffix from image data" << info.suffix() << suffix;
+                }
+                tmpFile.reset(FileUtils::createTemporaryFile(suffix));
                 if (tmpFile->open() && tmpFile->write(data) > -1) {
                     srcImagePath = tmpFile->fileName();
                 }
@@ -1268,4 +1283,11 @@ void MarkdownEditor::setupTableHelper()
     m_tableHelper = new MarkdownTableHelper(this, this);
     connect(getHighlighter(), &vte::PegMarkdownHighlighter::tableBlocksUpdated,
             m_tableHelper, &MarkdownTableHelper::updateTableBlocks);
+}
+
+QRgb MarkdownEditor::getPreviewBackground() const
+{
+    auto th = theme();
+    const auto &fmt = th->editorStyle(vte::Theme::EditorStyle::Preview);
+    return fmt.m_backgroundColor;
 }
